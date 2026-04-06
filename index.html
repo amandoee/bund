@@ -58,7 +58,7 @@
             position: absolute;
             transform-style: preserve-3d;
             transition: transform 6s cubic-bezier(0.1, 0, 0.1, 1);
-            transform: rotateX(-10deg) rotateY(0deg); /* Slight tilt for 3D look */
+            transform: rotateX(-10deg) rotateY(0deg);
         }
 
         .chamber {
@@ -75,9 +75,10 @@
             justify-content: center;
             background: var(--metallic);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-            backface-visibility: visible; /* Allow seeing back chambers */
+            backface-visibility: visible;
             text-align: center;
             padding: 10px;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
 
         .chamber span {
@@ -85,6 +86,8 @@
             font-size: 0.9rem;
             color: #eee;
             text-shadow: 1px 1px 2px #000;
+            word-wrap: break-word;
+            padding: 0 5px;
         }
 
         .chamber.active {
@@ -93,15 +96,6 @@
             background: linear-gradient(145deg, #443300, #111);
         }
 
-        /* Position 6 chambers in a circle around Y axis */
-        .chamber:nth-child(1) { transform: rotateY(0deg) translateZ(130px); }
-        .chamber:nth-child(2) { transform: rotateY(60deg) translateZ(130px); }
-        .chamber:nth-child(3) { transform: rotateY(120deg) translateZ(130px); }
-        .chamber:nth-child(4) { transform: rotateY(180deg) translateZ(130px); }
-        .chamber:nth-child(5) { transform: rotateY(240deg) translateZ(130px); }
-        .chamber:nth-child(6) { transform: rotateY(300deg) translateZ(130px); }
-
-        /* Pointer - placed at the front facing the user */
         .pointer {
             position: absolute;
             top: -30px;
@@ -115,7 +109,6 @@
             filter: drop-shadow(0 0 5px rgba(255, 77, 77, 0.8));
         }
 
-        /* Controls */
         .controls {
             display: flex;
             flex-direction: column;
@@ -167,14 +160,12 @@
             margin-top: 5px;
         }
 
-        /* Hidden YouTube Player */
         #youtube-player {
             position: absolute;
             top: -1000px;
             left: -1000px;
         }
 
-        /* Overlay for "Loading" state */
         #overlay {
             position: fixed;
             top: 0;
@@ -193,24 +184,60 @@
             opacity: 0;
             pointer-events: none;
         }
-    </style>
+    
+        /* Menu Styles */
+        #menu-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; z-index: 50; }
+        #menu-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; }
+        #menu-modal.open { transform: translateX(0); }
+        .menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        #close-menu-btn { background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; }
+        .menu-section { margin-bottom: 20px; }
+        .menu-section h2 { color: var(--accent-color); margin-bottom: 10px; }
+        .radio-group { display: flex; gap: 15px; margin-bottom: 15px; }
+        .radio-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 1.1rem; }
+        #participant-list { display: none; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; background: #222; padding: 15px; border-radius: 10px; }
+        #participant-list.visible { display: flex; }
+        .participant-item { display: flex; align-items: center; gap: 10px; }
+        .participant-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); }
+        .rules-text { background: #222; padding: 15px; border-radius: 10px; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.5; color: #ccc; }
+</style>
 </head>
 <body>
+    <button id="menu-btn">☰</button>
+    <div id="menu-modal">
+        <div class="menu-header">
+            <h2>Indstillinger</h2>
+            <button id="close-menu-btn">×</button>
+        </div>
+        <div class="menu-section">
+            <h2>Vælg Udgave</h2>
+            <div class="radio-group">
+                <label><input type="radio" name="edition" value="zara" checked> Zara Larsson</label>
+                <label><input type="radio" name="edition" value="normal"> Normal</label>
+            </div>
+        </div>
+        <div class="menu-section" id="participants-section" style="display: none;">
+            <h2>Deltagere (<span id="selected-count">0</span> valgt)</h2>
+            <div style="margin-bottom: 10px;">
+                <button id="select-all-btn" style="background: #444; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Vælg Alle</button>
+                <button id="deselect-all-btn" style="background: #444; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Fravælg Alle</button>
+            </div>
+            <div id="participant-list"></div>
+        </div>
+        <div class="menu-section">
+            <h2>Regler</h2>
+            <div class="rules-text" id="rules-container"></div>
+        </div>
+    </div>
 
     <div id="overlay">Loading Music...</div>
 
-    <h1>Russian Roulette <br> Zara Larsson Edition</h1>
+    <h1 id="main-title">Russian Roulette <br> Zara Larsson Edition</h1>
 
     <div class="stage">
         <div class="pointer"></div>
         <div id="cylinder" class="cylinder">
-            <!-- 6 Chambers -->
-            <div class="chamber"><span>?</span></div>
-            <div class="chamber"><span>?</span></div>
-            <div class="chamber"><span>?</span></div>
-            <div class="chamber"><span>?</span></div>
-            <div class="chamber"><span>?</span></div>
-            <div class="chamber"><span>?</span></div>
+            <!-- Dynamic Chambers -->
         </div>
     </div>
 
@@ -224,157 +251,280 @@
     <div id="youtube-player"></div>
 
     <script>
-        // Data for the 3 songs/people
-        const outcomes = [
-            { name: "Mandøe", song: "Can't Tame Her", id: "k4vO9g3tSHE" }, // New provided ID
+        // Zara Larsson Edition Data
+        const zaraOutcomes = [
+            { name: "Mandøe", song: "Can't Tame Her", id: "k4vO9g3tSHE" },
             { name: "Rynkeby", song: "All the Time", id: "aMKtzB7zNrg" },
-            { name: "Claes", song: "Lush Life", id: "tD4HCZe-tew" } // New provided ID
+            { name: "Claes", song: "Lush Life", id: "tD4HCZe-tew" }
         ];
 
+        // Normal Edition Data
+        const normalData = {
+  "participants": [
+    { "name": "Alfred", "song": "nik og jay", "artist": "nik og jay", "id": "DgnXXlDVJQY" },
+    { "name": "Amalie", "song": "Vi Maler Byen Rød", "artist": "Birthe Kjær", "id": "Gma8DMyIHqw" },
+    { "name": "Amina", "song": "Den bedste toer", "artist": "@lkymia", "id": "lFzbf7-UxGU" },
+    { "name": "An", "song": "Hey Baby (Drop it to the floor)", "artist": "Pitbull, T-Pain", "id": "LefQdEMJP1I" },
+    { "name": "Dam", "song": "Fireball", "artist": "Pitbull", "id": "If27FnxvjZA" },
+    { "name": "Mandøe", "song": "Can't tame her", "artist": "Zara Larsson", "id": "-Y0eMnbG3-w" },
+    { "name": "AM", "song": "Ben", "artist": "Tessa", "id": "WWZ_nM4IWd4" },
+    { "name": "Ask", "song": "Voldsom", "artist": "Fabräk", "id": "XJj7KLV-Qy0" },
+    { "name": "Astrid", "song": "for evigt", "artist": "Volbeat", "id": "TAhyZegVkhw" },
+    { "name": "Caroline", "song": "Sweet Caroline", "artist": "DJ ötzi", "id": "dFq2v5MC4YA" },
+    { "name": "Cecilie", "song": "Yerushalayim (Camus Remix)", "artist": "Yerachmiel Begun and the miami boys choir, camus", "id": "JdcvxyYeVu8" },
+    { "name": "Cordes", "song": "Mr. Brightside", "artist": "The Killers", "id": "l7MaKmKJqoc" },
+    { "name": "Porsmose", "song": "Hej", "artist": "Thor Farlov", "id": "1t6HY7O-Ts0" },
+    { "name": "Christoffer", "song": "Told you so", "artist": "Christopher", "id": "XfrIwdTE_IM" },
+    { "name": "Claes", "song": "Lush life", "artist": "Zara Larsson", "id": "MysKegBRtaA" },
+    { "name": "Clara", "song": "Plukke Æbler", "artist": "Minisjang", "id": "nNxPd4gRGJY" },
+    { "name": "Daniel", "song": "Watch You Go", "artist": "Bænch", "id": "cTfiekJkZ0Y" },
+    { "name": "Lange", "song": "Magaluf", "artist": "Darwich, Grexx", "id": "vWTLkthzLZE" },
+    { "name": "Kjeldberg", "song": "Kejserens nye skole - Introsang", "artist": "Johnny Jørgensen, Arvid Nielsen, Jørn Jespsersen", "id": "LVXC-FNFhHs" },
+    { "name": "Rynke", "song": "ALL THE TIME", "artist": "ZARA FUCKING LARSSON!!!", "id": "3OTjFqWcDQY" },
+    { "name": "Frida-Marie", "song": "Never say never", "artist": "Justin Bieber, Jaden", "id": "BEKgNks3RMM" },
+    { "name": "Hannah", "song": "The Spark - Felix Jaehn Remix", "artist": "Kabin Crew, Felix Jaehn, Lisdoonvarna Crew", "id": "WyEeDyL16EU" },
+    { "name": "Rask", "song": "Det burde ikke være sådan her", "artist": "Xander Linnet", "id": "rHluXvNtD4s" },
+    { "name": "Jernst", "song": "Ring Til Politiet", "artist": "Bring Det På", "id": "ENwnbvclguY" },
+    { "name": "Palm", "song": "Hoppe-nat", "artist": "Kaj og Andrea", "id": "DncmNxELpyw" },
+    { "name": "Jeppe", "song": "One more time", "artist": "Daft Punk", "id": "A2VpR8HahKc" },
+    { "name": "Leander", "song": "Brandy & Hr. Vimse", "artist": "Trine Dansgaard", "id": "ADYu9jkImAE" },
+    { "name": "Marcus", "song": "Hestepik", "artist": "Bondemanden", "id": "84JoTEBMNxM" },
+    { "name": "Maria", "song": "Hot sauce", "artist": "Nik & Jay", "id": "lIwoGKkkLXw" },
+    { "name": "Braas", "song": "Every time we touch", "artist": "Cascada", "id": "84sHTvn6xf8" },
+    { "name": "Mathias", "song": "Lækker", "artist": "Nik & Jay", "id": "GZL4oZI2Ro0" },
+    { "name": "Mia", "song": "Rollespilssangen", "artist": "Svedbanken", "id": "cUxdtTaWm-s" },
+    { "name": "Michael", "song": "Rollespilssangen", "artist": "Svedbanken", "id": "cUxdtTaWm-s" },
+    { "name": "Mirian", "song": "strip -remix", "artist": "Nik og Jay", "id": "tcBTyITxoV4" },
+    { "name": "Wiwi", "song": "Freed from desire", "artist": "Gala Rizzatto", "id": "STtNdjBbN9M" },
+    { "name": "Nicklas", "song": "Can Can (Hardstyle Mix)", "artist": "Da Tweekaz", "id": "eulzDh0S9No" },
+    { "name": "Nicolai", "song": "Later Bitches", "artist": "The Prince Karma", "id": "wP8FUeu3eUE" },
+    { "name": "Oliver", "song": "all the things she said", "artist": "t.A.T.u.", "id": "t0KnuIGOb9I" },
+    { "name": "Sara", "song": "Dope", "artist": "Puls ft. Ole Henriksen", "id": "R0hju1LbbUo" },
+    { "name": "Silja", "song": "hele vejen", "artist": "Omar og Mumle", "id": "1U-T0gj8kA0" },
+    { "name": "Sutter", "song": "sådan er kapitalismen", "artist": "perdick", "id": "KTVHKS6VqdA" },
+    { "name": "Thit", "song": "Undskyld", "artist": "L.O.C.", "id": "3SCfkNCc-64" },
+    { "name": "Victoria", "song": "Veninder", "artist": "Niklas", "id": "eAuE3Qs0kU8" },
+    { "name": "Viktor", "song": "Dark Room", "artist": "Tobias Rahim", "id": "ijWB-x0ZOl8" }
+  ],
+  "rules": "1. Når ens sang kommer på, skal man bunde.\n2. Hvis ens drikkevare er mere end halv flydt tæller den som en bunder\n3. Hvis man lige har bundet, er man immun overfor sin bundesang en time efter\n4. Drikkevaren skal bundes inden bundesangen er færdig"
+};
+        
+        let normalParticipants = [];
+        let rulesText = normalData.rules;
 
-        // 6 chambers, 2 for each person
-        const chambersData = [
-            outcomes[0], outcomes[1], outcomes[2],
-            outcomes[0], outcomes[1], outcomes[2]
-        ];
+        if (normalData.participants) {
+            normalParticipants = normalData.participants.map(p => ({ ...p, checked: true }));
+        }
+
+        const savedChecks = localStorage.getItem('normalParticipantsChecks');
+        if (savedChecks) {
+            try {
+                const parsed = JSON.parse(savedChecks);
+                normalParticipants.forEach(p => {
+                    if (parsed[p.name] !== undefined) p.checked = parsed[p.name];
+                });
+            } catch(e) {}
+        }
+
+        // State
+        let currentEdition = 'zara';
+        let currentRotation = 0;
+        let isSpinning = false;
+        let activeChambersData = [];
 
         // DOM Elements
         const cylinder = document.getElementById('cylinder');
         const spinBtn = document.getElementById('spin-btn');
         const resultDisplay = document.getElementById('result');
         const overlay = document.getElementById('overlay');
-        const chambers = document.querySelectorAll('.chamber');
+        const mainTitle = document.getElementById('main-title');
 
-        // Initialize labels
-        chambers.forEach((ch, i) => {
-            ch.innerHTML = `<span>${chambersData[i].name}</span>`;
+        // Menu Elements
+        const menuBtn = document.getElementById('menu-btn');
+        const closeMenuBtn = document.getElementById('close-menu-btn');
+        const menuModal = document.getElementById('menu-modal');
+        const editionRadios = document.querySelectorAll('input[name="edition"]');
+        const participantsSection = document.getElementById('participants-section');
+        const participantList = document.getElementById('participant-list');
+        const rulesContainer = document.getElementById('rules-container');
+        const selectedCount = document.getElementById('selected-count');
+
+        rulesContainer.textContent = rulesText;
+
+        function renderParticipantList() {
+            participantList.innerHTML = '';
+            let count = 0;
+            normalParticipants.forEach((p, index) => {
+                if (p.checked) count++;
+                const div = document.createElement('div');
+                div.className = 'participant-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="p-${index}" ${p.checked ? 'checked' : ''}>
+                    <label for="p-${index}"><strong>${p.name}</strong> - <small>${p.song}</small></label>
+                `;
+                div.querySelector('input').addEventListener('change', (e) => {
+                    normalParticipants[index].checked = e.target.checked;
+                    saveChecks();
+                    updateSelectedCount();
+                    setupChambersForIdle();
+                });
+                participantList.appendChild(div);
+            });
+            selectedCount.textContent = count;
+        }
+
+        function updateSelectedCount() {
+            const count = normalParticipants.filter(p => p.checked).length;
+            selectedCount.textContent = count;
+        }
+
+        function saveChecks() {
+            const checkMap = {};
+            normalParticipants.forEach(p => { checkMap[p.name] = p.checked; });
+            localStorage.setItem('normalParticipantsChecks', JSON.stringify(checkMap));
+        }
+
+        document.getElementById('select-all-btn').addEventListener('click', () => {
+            normalParticipants.forEach(p => p.checked = true);
+            renderParticipantList();
+            saveChecks();
+            setupChambersForIdle();
         });
 
-        // Better randomness using crypto
+        document.getElementById('deselect-all-btn').addEventListener('click', () => {
+            normalParticipants.forEach(p => p.checked = false);
+            renderParticipantList();
+            saveChecks();
+            setupChambersForIdle();
+        });
+
+        function renderCylinder(data) {
+            cylinder.innerHTML = '';
+            if (data.length === 0) return;
+
+            const angleStep = 360 / data.length;
+            // Scale chamber size and radius based on count
+            const chamberWidth = Math.max(40, Math.min(120, 800 / data.length));
+            const radius = Math.max(130, (data.length * chamberWidth) / (2 * Math.PI));
+
+            data.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = 'chamber';
+                div.style.width = `${chamberWidth}px`;
+                div.style.height = `${chamberWidth}px`;
+                div.style.left = `${150 - chamberWidth/2}px`;
+                div.style.top = `${150 - chamberWidth/2}px`;
+                div.style.transform = `rotateY(${i * angleStep}deg) translateZ(${radius}px)`;
+                div.innerHTML = `<span>${p.name}</span>`;
+                if (chamberWidth < 60) div.querySelector('span').style.fontSize = '0.6rem';
+                cylinder.appendChild(div);
+            });
+        }
+
+        function setupChambersForIdle() {
+            if (currentEdition === 'zara') {
+                activeChambersData = [...zaraOutcomes, ...zaraOutcomes];
+            } else {
+                activeChambersData = normalParticipants.filter(p => p.checked);
+            }
+            renderCylinder(activeChambersData);
+            resultDisplay.innerHTML = "";
+        }
+
+        // Initialize
+        renderParticipantList();
+        setupChambersForIdle();
+
+        menuBtn.addEventListener('click', () => menuModal.classList.add('open'));
+        closeMenuBtn.addEventListener('click', () => menuModal.classList.remove('open'));
+
+        editionRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentEdition = e.target.value;
+                participantsSection.style.display = currentEdition === 'normal' ? 'block' : 'none';
+                participantList.classList.toggle('visible', currentEdition === 'normal');
+                mainTitle.innerHTML = currentEdition === 'normal' ? "Russian Roulette <br> Normal Edition" : "Russian Roulette <br> Zara Larsson Edition";
+                setupChambersForIdle();
+            });
+        });
+
         function getRandomInt(max) {
             const array = new Uint32Array(1);
             window.crypto.getRandomValues(array);
             return array[0] % max;
         }
 
-        // YouTube API Setup
+        // YouTube API
         let player;
         window.onYouTubeIframeAPIReady = function() {
             player = new YT.Player('youtube-player', {
-                height: '0',
-                width: '0',
-                videoId: outcomes[0].id,
+                height: '0', width: '0',
+                videoId: zaraOutcomes[0].id,
                 host: 'https://www.youtube-nocookie.com',
-                playerVars: {
-                    'origin': window.location.origin,
-                    'enablejsapi': 1,
-                    'autoplay': 1
-                },
+                playerVars: { 'origin': window.location.origin, 'enablejsapi': 1, 'autoplay': 1 },
                 events: {
-                    'onReady': onPlayerReady,
+                    'onReady': () => overlay.classList.add('hidden'),
                     'onError': (e) => {
-                        console.error("YT Player Error:", e.data, e);
                         overlay.classList.add('hidden');
-                        // Show warning but don't break the game
-                        if (e.data === 150 || e.data === 101) {
-                            resultDisplay.innerHTML = "<small style='color:orange'>Warning: Music restricted on localhost. Try on GitHub Pages!</small>";
-                        }
+                        if (e.data === 150 || e.data === 101) resultDisplay.innerHTML += "<br><small style='color:orange'>Warning: Music restricted.</small>";
                     }
                 }
             });
         };
 
-        function onPlayerReady(event) {
-            console.log("YT Player Ready");
-            overlay.classList.add('hidden');
-        }
+        setTimeout(() => overlay.classList.add('hidden'), 5000);
 
-        // Fallback for loading screen
-        setTimeout(() => {
-            if (!overlay.classList.contains('hidden')) {
-                console.warn("YouTube API timeout - hiding overlay anyway");
-                overlay.classList.add('hidden');
-            }
-        }, 5000);
-
-        // Audio Elements
         const fireAudio = new Audio('fire.mp3');
-
         function playFireSound() {
             fireAudio.currentTime = 0;
-            fireAudio.play().catch(e => console.error("Fire audio error:", e));
+            fireAudio.play().catch(e => console.error(e));
         }
-
-        // State
-        let currentRotation = 0;
-        let isSpinning = false;
 
         function spin() {
             if (isSpinning) return;
+            if (activeChambersData.length === 0) { alert("Vælg mindst én deltager!"); return; }
+
             isSpinning = true;
             spinBtn.disabled = true;
-            resultDisplay.innerHTML = "GØR DIN ØL KLAR...";
+            resultDisplay.innerHTML = "GET READY...";
+            document.querySelectorAll('.chamber').forEach(c => c.classList.remove('active'));
+
+            if (player && player.stopVideo) player.stopVideo();
+
+            const targetIndex = getRandomInt(activeChambersData.length);
+            const chosenOutcome = activeChambersData[targetIndex];
+            const angleStep = 360 / activeChambersData.length;
             
-            // Highlight reset
-            chambers.forEach(c => c.classList.remove('active'));
-
-            // Stop any playing music
-            if (player && player.stopVideo) {
-                player.stopVideo();
-            }
-
-            // Pick a random result
-            const randomIndex = getRandomInt(6);
-            const outcome = chambersData[randomIndex];
-            console.log("Chosen Index:", randomIndex, "Target:", outcome.name);
-
-            // Calculate rotation
             const extraSpins = (8 + getRandomInt(5)) * 360;
-            const chamberAngle = randomIndex * 60;
-            
-            // Current position normalized to 0-360
+            const chamberAngle = targetIndex * angleStep;
             const currentMod = currentRotation % 360;
-            // Target is a negative rotation to bring the chamber to the front
-            const targetRotation = currentRotation - extraSpins - chamberAngle - (currentMod);
+            const targetRotation = currentRotation - extraSpins - chamberAngle - currentMod;
             
             cylinder.style.transform = `rotateX(-10deg) rotateY(${targetRotation}deg)`;
-            
             currentRotation = targetRotation;
 
-            // Wait for animation (6s)
             setTimeout(() => {
-                isSpinning = false;
-                spinBtn.disabled = false;
-                
-                // Play fire sound
+                isSpinning = true; // Still technically ending
                 playFireSound();
-                
-                // Show result
-                resultDisplay.innerHTML = `FISSE! <span class="highlight">${outcome.name} drikker!</span><br><small>Afspiller: ${outcome.song}</small>`;
-                
-                // Play music
-                if (player) {
-                    player.loadVideoById(outcome.id);
+                resultDisplay.innerHTML = `FISSE! <span class="highlight">${chosenOutcome.name} drikker!</span><br><small>Afspiller: ${chosenOutcome.song}</small>`;
+                if (player && chosenOutcome.id) {
+                    player.loadVideoById(chosenOutcome.id);
                     player.playVideo();
                 }
-
-                // Highlight winner
-                chambers[randomIndex].classList.add('active');
-
+                const chambersDOM = document.querySelectorAll('.chamber');
+                if (chambersDOM[targetIndex]) chambersDOM[targetIndex].classList.add('active');
+                
+                isSpinning = false;
+                spinBtn.disabled = false;
             }, 6000);
         }
 
         spinBtn.addEventListener('click', spin);
-        document.getElementById('stop-btn').addEventListener('click', () => {
-            if (player && player.stopVideo) player.stopVideo();
-        });
+        document.getElementById('stop-btn').addEventListener('click', () => player && player.stopVideo && player.stopVideo());
 
-        // Load YouTube API
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
+        document.body.appendChild(tag);
     </script>
 </body>
 </html>
