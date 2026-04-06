@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Russian Roulette: Zara Larsson Edition</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --accent-color: #ff4d4d;
+            --metallic: linear-gradient(145deg, #333, #111);
+            --gold: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        /* 3D Cylinder Container */
+        .stage {
+            width: 300px;
+            height: 300px;
+            perspective: 1000px;
+            position: relative;
+            margin-bottom: 3rem;
+        }
+
+        .cylinder {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            transition: transform 6s cubic-bezier(0.1, 0, 0.1, 1);
+            transform: rotateX(-10deg) rotateY(0deg); /* Slight tilt for 3D look */
+        }
+
+        .chamber {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            left: 90px;
+            top: 90px;
+            border: 4px solid #444;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--metallic);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            backface-visibility: visible; /* Allow seeing back chambers */
+            text-align: center;
+            padding: 10px;
+        }
+
+        .chamber span {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #eee;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .chamber.active {
+            border-color: var(--gold);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            background: linear-gradient(145deg, #443300, #111);
+        }
+
+        /* Position 6 chambers in a circle around Y axis */
+        .chamber:nth-child(1) { transform: rotateY(0deg) translateZ(130px); }
+        .chamber:nth-child(2) { transform: rotateY(60deg) translateZ(130px); }
+        .chamber:nth-child(3) { transform: rotateY(120deg) translateZ(130px); }
+        .chamber:nth-child(4) { transform: rotateY(180deg) translateZ(130px); }
+        .chamber:nth-child(5) { transform: rotateY(240deg) translateZ(130px); }
+        .chamber:nth-child(6) { transform: rotateY(300deg) translateZ(130px); }
+
+        /* Pointer - placed at the front facing the user */
+        .pointer {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: var(--accent-color);
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            z-index: 10;
+            filter: drop-shadow(0 0 5px rgba(255, 77, 77, 0.8));
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        #spin-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3), 0 0 15px rgba(255, 77, 77, 0.4);
+            transition: transform 0.2s, background 0.2s;
+            width: 100%;
+        }
+
+        #spin-btn:active {
+            transform: scale(0.95);
+        }
+
+        #spin-btn:disabled {
+            background: #555;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        #result {
+            margin-top: 2rem;
+            font-size: 1.1rem;
+            text-align: center;
+            min-height: 3rem;
+            padding: 0 20px;
+            line-height: 1.4;
+        }
+
+        .highlight {
+            color: var(--gold);
+            font-weight: bold;
+            display: block;
+            font-size: 1.3rem;
+            margin-top: 5px;
+        }
+
+        /* Hidden YouTube Player */
+        #youtube-player {
+            position: absolute;
+            top: -1000px;
+            left: -1000px;
+        }
+
+        /* Overlay for "Loading" state */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 0.5s;
+        }
+
+        #overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">Loading Music...</div>
+
+    <h1>Russian Roulette <br> Zara Larsson Edition</h1>
+
+    <div class="stage">
+        <div class="pointer"></div>
+        <div id="cylinder" class="cylinder">
+            <!-- 6 Chambers -->
+            <div class="chamber"><span>?</span></div>
+            <div class="chamber"><span>?</span></div>
+            <div class="chamber"><span>?</span></div>
+            <div class="chamber"><span>?</span></div>
+            <div class="chamber"><span>?</span></div>
+            <div class="chamber"><span>?</span></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="spin-btn">Spin to Drink</button>
+    </div>
+
+    <div id="result"></div>
+
+    <div id="youtube-player"></div>
+
+    <script>
+        // Data for the 3 songs/people
+        const outcomes = [
+            { name: "Mandøe", song: "Can't Tame Her", id: "_mS_FmX_H_g" },
+            { name: "Rynkeby", song: "All the Time", id: "aMKtzB7zNrg" },
+            { name: "Claes", song: "Lush Life", id: "tD4hcZe7_W4" }
+        ];
+
+        // 6 chambers, 2 for each person
+        const chambersData = [
+            outcomes[0], outcomes[1], outcomes[2],
+            outcomes[0], outcomes[1], outcomes[2]
+        ];
+
+        // DOM Elements
+        const cylinder = document.getElementById('cylinder');
+        const spinBtn = document.getElementById('spin-btn');
+        const resultDisplay = document.getElementById('result');
+        const overlay = document.getElementById('overlay');
+        const chambers = document.querySelectorAll('.chamber');
+
+        // Initialize labels
+        chambers.forEach((ch, i) => {
+            ch.innerHTML = `<span>${chambersData[i].name}</span>`;
+        });
+
+        // YouTube API Setup
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                height: '0',
+                width: '0',
+                videoId: outcomes[0].id,
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            overlay.classList.add('hidden');
+        }
+
+        // Audio Context for "tick" sound
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playTick() {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // State
+        let currentRotation = 0;
+        let isSpinning = false;
+
+        function spin() {
+            if (isSpinning) return;
+            initAudio();
+            isSpinning = true;
+            spinBtn.disabled = true;
+            resultDisplay.innerHTML = "GET READY...";
+            
+            // Stop any playing music
+            if (player && player.stopVideo) {
+                player.stopVideo();
+            }
+
+            // Pick a random result
+            const randomIndex = Math.floor(Math.random() * 6);
+            const outcome = chambersData[randomIndex];
+
+            const extraSpins = (8 + Math.floor(Math.random() * 5)) * 360;
+            const chamberAngle = randomIndex * 60;
+            
+            // Align to 0 first, then subtract target
+            const targetRotation = currentRotation - extraSpins - chamberAngle - (currentRotation % 360);
+            
+            cylinder.style.transform = `rotateX(-10deg) rotateY(${targetRotation}deg)`;
+            
+            // Visual ticking effect (simulated)
+            let lastTick = 0;
+            const startTime = performance.now();
+            const duration = 6000;
+
+            function animateTick(now) {
+                const elapsed = now - startTime;
+                if (elapsed < duration) {
+                    const progress = elapsed / duration;
+                    // Ease out cubic
+                    const currentAngle = currentRotation + (targetRotation - currentRotation) * (1 - Math.pow(1 - progress, 3));
+                    if (Math.abs(currentAngle - lastTick) > 30) {
+                        playTick();
+                        lastTick = currentAngle;
+                    }
+                    requestAnimationFrame(animateTick);
+                }
+            }
+            requestAnimationFrame(animateTick);
+
+            currentRotation = targetRotation;
+
+            // Wait for animation (6s)
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                
+                // Show result
+                resultDisplay.innerHTML = `UNLUCKY! <span class="highlight">${outcome.name} drinks!</span><br><small>Playing: ${outcome.song}</small>`;
+                
+                // Play music
+                if (player) {
+                    player.loadVideoById(outcome.id);
+                    player.playVideo();
+                }
+
+                // Highlight winner
+                chambers.forEach(c => c.classList.remove('active'));
+                chambers[randomIndex].classList.add('active');
+
+            }, 6000);
+        }
+
+        spinBtn.addEventListener('click', spin);
+        document.getElementById('stop-btn').addEventListener('click', () => {
+            if (player && player.stopVideo) player.stopVideo();
+        });
+
+        // Load YouTube API
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    </script>
+</body>
+</html>
