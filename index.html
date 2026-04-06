@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Russian Roulette: Zara Larsson Edition</title>
+    <title>Russisk Roulette: Zara Larsson Edition</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>">
     <style>
         :root {
@@ -215,8 +215,8 @@
     </div>
 
     <div class="controls">
-        <button id="spin-btn">Spin to Drink</button>
-        <button id="stop-btn" style="background: #333; margin-top: 10px; font-size: 0.8rem; padding: 0.5rem 1.5rem; color: #fff; border: none; border-radius: 20px; cursor: pointer;">Stop Music</button>
+        <button id="spin-btn">DREJ FOR HELVEDE</button>
+        <button id="stop-btn" style="background: #333; margin-top: 10px; font-size: 0.8rem; padding: 0.5rem 1.5rem; color: #fff; border: none; border-radius: 20px; cursor: pointer;">Stop Musik</button>
     </div>
 
     <div id="result"></div>
@@ -297,27 +297,12 @@
             }
         }, 5000);
 
-        // Audio Context for "tick" sound
-        let audioCtx;
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
+        // Audio Elements
+        const fireAudio = new Audio('fire.mp3');
 
-        function playTick() {
-            if (!audioCtx) return;
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.1);
+        function playFireSound() {
+            fireAudio.currentTime = 0;
+            fireAudio.play().catch(e => console.error("Fire audio error:", e));
         }
 
         // State
@@ -326,10 +311,9 @@
 
         function spin() {
             if (isSpinning) return;
-            initAudio();
             isSpinning = true;
             spinBtn.disabled = true;
-            resultDisplay.innerHTML = "GET READY...";
+            resultDisplay.innerHTML = "GØR DIN ØL KLAR...";
             
             // Highlight reset
             chambers.forEach(c => c.classList.remove('active'));
@@ -355,27 +339,6 @@
             
             cylinder.style.transform = `rotateX(-10deg) rotateY(${targetRotation}deg)`;
             
-            // Visual ticking effect (simulated)
-            let lastTickAngle = currentRotation;
-            const startTime = performance.now();
-            const duration = 6000;
-
-            function animateTick(now) {
-                const elapsed = now - startTime;
-                if (elapsed < duration) {
-                    const progress = elapsed / duration;
-                    const easeOut = 1 - Math.pow(1 - progress, 3);
-                    const currentAngle = currentRotation + (targetRotation - currentRotation) * easeOut;
-                    
-                    if (Math.abs(currentAngle - lastTickAngle) >= 30) {
-                        playTick();
-                        lastTickAngle = currentAngle;
-                    }
-                    requestAnimationFrame(animateTick);
-                }
-            }
-            requestAnimationFrame(animateTick);
-
             currentRotation = targetRotation;
 
             // Wait for animation (6s)
@@ -383,8 +346,11 @@
                 isSpinning = false;
                 spinBtn.disabled = false;
                 
+                // Play fire sound
+                playFireSound();
+                
                 // Show result
-                resultDisplay.innerHTML = `UNLUCKY! <span class="highlight">${outcome.name} drinks!</span><br><small>Playing: ${outcome.song}</small>`;
+                resultDisplay.innerHTML = `FISSE! <span class="highlight">${outcome.name} drikker!</span><br><small>Afspiller: ${outcome.song}</small>`;
                 
                 // Play music
                 if (player) {
